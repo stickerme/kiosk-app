@@ -1,0 +1,658 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no" />
+<meta name="apple-mobile-web-app-capable" content="yes" />
+<meta name="theme-color" content="#0a0a0a" />
+<title>sticker.me — Kiosk Config</title>
+<style>
+  *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; -webkit-tap-highlight-color: transparent; }
+  :root {
+    --bg: #0a0a0a; --surface: #141414; --surface2: #1c1c1c; --border: #272727;
+    --text: #f0f0f0; --muted: #777; --muted2: #444;
+    --accent: #C8A96E; --accent-dim: rgba(200,169,110,0.12);
+    --success: #4CAF7D; --success-dim: rgba(76,175,125,0.12);
+    --error: #E05555; --error-dim: rgba(224,85,85,0.12);
+    --warning: #E0A855; --warning-dim: rgba(224,168,85,0.12);
+  }
+  html, body { min-height: 100%; background: var(--bg); color: var(--text); font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif; }
+
+  /* ── Login screen ── */
+  #loginScreen { display: flex; align-items: center; justify-content: center; min-height: 100vh; padding: 40px 20px; }
+  .login-box { width: 100%; max-width: 380px; text-align: center; }
+  .login-logo { font-size: 24px; font-weight: 800; color: var(--accent); letter-spacing: -0.5px; margin-bottom: 6px; }
+  .login-sub { font-size: 13px; color: var(--muted); margin-bottom: 32px; }
+  .login-box input { width: 100%; background: var(--surface); border: 1px solid var(--border); border-radius: 13px; padding: 16px; font-size: 16px; font-family: inherit; color: var(--text); outline: none; text-align: center; letter-spacing: 2px; margin-bottom: 12px; -webkit-appearance: none; }
+  .login-box input:focus { border-color: var(--accent); }
+  .login-btn { width: 100%; padding: 16px; background: var(--accent); border: none; border-radius: 13px; font-size: 16px; font-weight: 700; color: #0a0a0a; cursor: pointer; font-family: inherit; }
+  .login-error { font-size: 13px; color: var(--error); margin-top: 10px; display: none; }
+
+  /* ── Main layout ── */
+  #mainUI { display: none; max-width: 720px; margin: 0 auto; padding: 0 20px 60px; }
+  .page-header { padding: 20px 0 16px; border-bottom: 1px solid var(--border); margin-bottom: 28px; display: flex; align-items: center; justify-content: space-between; }
+  .page-logo { font-size: 17px; font-weight: 700; color: var(--accent); letter-spacing: -0.3px; }
+  .page-title { font-size: 12px; color: var(--muted); }
+  .logout-btn { font-size: 12px; color: var(--muted); background: none; border: 1px solid var(--border); border-radius: 8px; padding: 6px 12px; cursor: pointer; font-family: inherit; }
+
+  /* ── Section ── */
+  .section { margin-bottom: 40px; }
+  .section-title { font-size: 13px; font-weight: 700; text-transform: uppercase; letter-spacing: 0.8px; color: var(--muted); margin-bottom: 16px; }
+
+  /* ── Form ── */
+  .form-card { background: var(--surface); border: 1px solid var(--border); border-radius: 16px; padding: 20px; }
+  .field { margin-bottom: 18px; }
+  .field:last-child { margin-bottom: 0; }
+  .field-label { display: block; font-size: 11px; font-weight: 600; text-transform: uppercase; letter-spacing: 0.8px; color: var(--muted); margin-bottom: 8px; }
+  .field-hint { font-size: 11px; color: var(--muted); margin-top: 5px; line-height: 1.4; }
+  input[type="text"], input[type="url"], textarea, select {
+    width: 100%; background: var(--surface2); border: 1px solid var(--border);
+    border-radius: 11px; padding: 13px 15px; font-size: 15px; font-family: inherit;
+    color: var(--text); outline: none; transition: border-color 0.2s; -webkit-appearance: none; appearance: none;
+  }
+  input:focus, textarea:focus, select:focus { border-color: var(--accent); }
+  input::placeholder, textarea::placeholder { color: var(--muted2); }
+  textarea { resize: none; min-height: 72px; line-height: 1.5; font-size: 14px; }
+  .select-wrap { position: relative; }
+  .select-wrap::after { content: ''; position: absolute; right: 14px; top: 50%; transform: translateY(-50%); width: 0; height: 0; border-left: 5px solid transparent; border-right: 5px solid transparent; border-top: 6px solid var(--muted); pointer-events: none; }
+  .field-row { display: grid; grid-template-columns: 1fr 1fr; gap: 12px; }
+
+  /* ── Style checkboxes ── */
+  .style-grid { display: grid; grid-template-columns: repeat(auto-fill, minmax(150px, 1fr)); gap: 8px; }
+  .style-check { display: flex; align-items: center; gap: 8px; background: var(--surface2); border: 1px solid var(--border); border-radius: 10px; padding: 10px 12px; cursor: pointer; transition: border-color 0.15s, background 0.15s; user-select: none; }
+  .style-check.checked { border-color: var(--accent); background: var(--accent-dim); }
+  .style-check input[type="checkbox"] { display: none; }
+  .style-check-box { width: 16px; height: 16px; border: 2px solid var(--border); border-radius: 4px; flex-shrink: 0; display: flex; align-items: center; justify-content: center; transition: all 0.15s; }
+  .style-check.checked .style-check-box { background: var(--accent); border-color: var(--accent); }
+  .style-check.checked .style-check-box::after { content: '✓'; font-size: 10px; color: #0a0a0a; font-weight: 800; }
+  .style-check-label { font-size: 12px; font-weight: 500; color: var(--muted); }
+  .style-check.checked .style-check-label { color: var(--text); }
+  .style-order-hint { font-size: 11px; color: var(--muted); margin-top: 8px; }
+
+  /* ── Asset upload ── */
+  .asset-upload-area { border: 2px dashed var(--border); border-radius: 12px; padding: 20px; text-align: center; cursor: pointer; transition: border-color 0.2s; background: var(--surface2); }
+  .asset-upload-area:hover { border-color: var(--accent); }
+  .asset-upload-area.has-asset { border-style: solid; border-color: var(--accent); }
+  .asset-preview { max-width: 120px; max-height: 120px; border-radius: 8px; margin: 0 auto 10px; display: block; object-fit: cover; }
+  .asset-upload-text { font-size: 13px; color: var(--muted); }
+  .asset-upload-text strong { color: var(--accent); display: block; margin-bottom: 3px; }
+
+  /* ── Toggle ── */
+  .toggle-row { display: flex; align-items: center; justify-content: space-between; padding: 14px 0; border-bottom: 1px solid var(--border); }
+  .toggle-row:last-child { border-bottom: none; padding-bottom: 0; }
+  .toggle-info { flex: 1; }
+  .toggle-info strong { font-size: 14px; color: var(--text); display: block; margin-bottom: 2px; }
+  .toggle-info span { font-size: 12px; color: var(--muted); }
+  .toggle { position: relative; width: 44px; height: 26px; flex-shrink: 0; margin-left: 16px; }
+  .toggle input { display: none; }
+  .toggle-track { position: absolute; inset: 0; background: var(--surface2); border: 1px solid var(--border); border-radius: 99px; cursor: pointer; transition: background 0.2s; }
+  .toggle input:checked ~ .toggle-track { background: var(--accent); border-color: var(--accent); }
+  .toggle-thumb { position: absolute; top: 3px; left: 3px; width: 18px; height: 18px; background: var(--muted); border-radius: 50%; transition: transform 0.2s, background 0.2s; pointer-events: none; }
+  .toggle input:checked ~ .toggle-thumb { transform: translateX(18px); background: #0a0a0a; }
+
+  /* ── Buttons ── */
+  .btn-row { display: flex; gap: 10px; margin-top: 20px; flex-wrap: wrap; }
+  .btn { padding: 13px 20px; border-radius: 11px; font-size: 14px; font-weight: 600; font-family: inherit; cursor: pointer; border: none; transition: opacity 0.15s, transform 0.1s; }
+  .btn:active { transform: scale(0.97); }
+  .btn-primary { background: var(--accent); color: #0a0a0a; }
+  .btn-secondary { background: var(--surface2); color: var(--text); border: 1px solid var(--border); }
+  .btn-danger { background: var(--error-dim); color: var(--error); border: 1px solid rgba(224,85,85,0.3); }
+  .btn:disabled { opacity: 0.4; cursor: not-allowed; }
+  .btn-full { width: 100%; }
+
+  /* ── Location cards ── */
+  .location-card { background: var(--surface); border: 1px solid var(--border); border-radius: 16px; padding: 18px; margin-bottom: 12px; }
+  .location-card.inactive { opacity: 0.6; }
+  .loc-top { display: flex; align-items: flex-start; justify-content: space-between; gap: 12px; margin-bottom: 12px; }
+  .loc-name { font-size: 16px; font-weight: 600; color: var(--text); }
+  .loc-id { font-size: 12px; color: var(--muted); margin-top: 2px; }
+  .loc-status { font-size: 11px; font-weight: 600; padding: 4px 10px; border-radius: 99px; flex-shrink: 0; }
+  .loc-status.active { background: var(--success-dim); color: var(--success); border: 1px solid rgba(76,175,125,0.3); }
+  .loc-status.inactive { background: var(--surface2); color: var(--muted); border: 1px solid var(--border); }
+  .loc-urls { display: flex; flex-direction: column; gap: 6px; margin-bottom: 14px; }
+  .url-row { display: flex; align-items: center; gap: 8px; background: var(--surface2); border-radius: 8px; padding: 8px 10px; }
+  .url-label { font-size: 10px; font-weight: 700; text-transform: uppercase; letter-spacing: 0.5px; color: var(--muted); flex-shrink: 0; width: 52px; }
+  .url-text { font-size: 11px; color: var(--accent); flex: 1; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+  .copy-btn { font-size: 11px; color: var(--muted); background: none; border: none; cursor: pointer; padding: 2px 6px; border-radius: 4px; font-family: inherit; flex-shrink: 0; transition: color 0.15s; }
+  .copy-btn:hover { color: var(--accent); }
+  .loc-actions { display: flex; gap: 8px; flex-wrap: wrap; }
+  .loc-btn { padding: 8px 14px; border-radius: 9px; font-size: 12px; font-weight: 600; font-family: inherit; cursor: pointer; border: 1px solid var(--border); background: var(--surface2); color: var(--text); transition: all 0.15s; }
+  .loc-btn.danger { color: var(--error); border-color: rgba(224,85,85,0.3); background: var(--error-dim); }
+  .loc-btn.warn { color: var(--warning); border-color: rgba(224,168,85,0.3); background: var(--warning-dim); }
+
+  /* ── Toast ── */
+  .toast { position: fixed; bottom: 24px; left: 16px; right: 16px; max-width: 680px; margin: 0 auto; padding: 14px 18px; border-radius: 13px; font-size: 14px; font-weight: 500; display: flex; align-items: center; gap: 10px; transform: translateY(100px); opacity: 0; transition: transform 0.3s cubic-bezier(0.34,1.56,0.64,1), opacity 0.2s; z-index: 200; pointer-events: none; }
+  .toast.show { transform: translateY(0); opacity: 1; }
+  .toast.success { background: var(--success-dim); border: 1px solid rgba(76,175,125,0.4); color: var(--success); }
+  .toast.error { background: var(--error-dim); border: 1px solid rgba(224,85,85,0.4); color: var(--error); }
+
+  /* ── Spinner ── */
+  .spinner { width: 18px; height: 18px; border: 2px solid rgba(255,255,255,0.2); border-top-color: currentColor; border-radius: 50%; animation: spin 0.7s linear infinite; flex-shrink: 0; }
+  @keyframes spin { to { transform: rotate(360deg); } }
+
+  /* ── Edit modal overlay ── */
+  #editOverlay { display: none; position: fixed; inset: 0; background: rgba(0,0,0,0.7); z-index: 150; overflow-y: auto; padding: 20px; }
+  #editOverlay.show { display: flex; align-items: flex-start; justify-content: center; }
+  .modal { background: var(--bg); border: 1px solid var(--border); border-radius: 18px; width: 100%; max-width: 600px; padding: 24px; margin: auto; }
+  .modal-title { font-size: 17px; font-weight: 700; color: var(--text); margin-bottom: 20px; }
+  .modal-actions { display: flex; gap: 10px; margin-top: 24px; }
+</style>
+</head>
+<body>
+
+<!-- Login -->
+<div id="loginScreen">
+  <div class="login-box">
+    <div class="login-logo">sticker.me</div>
+    <div class="login-sub">Kiosk Configuration</div>
+    <input type="password" id="passwordInput" placeholder="Enter password" onkeydown="if(event.key==='Enter')login()" />
+    <button class="login-btn" onclick="login()">Enter</button>
+    <div class="login-error" id="loginError">Incorrect password.</div>
+  </div>
+</div>
+
+<!-- Main UI -->
+<div id="mainUI">
+  <div class="page-header">
+    <div>
+      <div class="page-logo">sticker.me</div>
+      <div class="page-title">Kiosk Configuration</div>
+    </div>
+    <button class="logout-btn" onclick="logout()">Log out</button>
+  </div>
+
+  <!-- Create / Edit form (inline, shown by default for creating) -->
+  <div class="section" id="createSection">
+    <div class="section-title" id="formSectionTitle">Create New Kiosk Location</div>
+    <div class="form-card">
+
+      <div class="field-row">
+        <div class="field">
+          <label class="field-label">Location name <span style="color:var(--error);">*</span></label>
+          <input type="text" id="fName" placeholder="e.g. Scottsdale Fashion Square" oninput="autoGenId()" />
+        </div>
+        <div class="field">
+          <label class="field-label">Location ID <span style="color:var(--error);">*</span></label>
+          <input type="text" id="fId" placeholder="e.g. scottsdalemall" autocorrect="off" autocapitalize="none" />
+          <div class="field-hint">Lowercase, no spaces. Used in URLs.</div>
+        </div>
+      </div>
+
+      <div class="field-row">
+        <div class="field">
+          <label class="field-label">City <span style="color:var(--error);">*</span></label>
+          <input type="text" id="fCity" placeholder="e.g. Scottsdale" />
+        </div>
+        <div class="field">
+          <label class="field-label">Country</label>
+          <div class="select-wrap">
+            <select id="fCountry">
+              <option value="US">🇺🇸 United States</option>
+              <option value="ID">🇮🇩 Indonesia</option>
+              <option value="JP">🇯🇵 Japan</option>
+              <option value="TW">🇹🇼 Taiwan</option>
+              <option value="AU">🇦🇺 Australia</option>
+              <option value="OTHER">Other</option>
+            </select>
+          </div>
+        </div>
+      </div>
+
+      <div class="field">
+        <label class="field-label">Location context <span style="font-weight:400;text-transform:none;letter-spacing:0;font-size:11px;color:var(--muted);">(optional)</span></label>
+        <textarea id="fContext" placeholder="e.g. This kiosk is set up at Yasaka Shrine in Kyoto, Japan. Include Japanese cultural elements."></textarea>
+        <div class="field-hint">This gets injected into every sticker prompt for this location.</div>
+      </div>
+
+      <div class="field">
+        <label class="field-label">Active styles <span style="color:var(--error);">*</span></label>
+        <div class="style-grid" id="styleGrid"></div>
+        <div class="style-order-hint">Checked styles appear in the customer dropdown in this order.</div>
+      </div>
+
+      <div class="field">
+        <label class="field-label">Asset photo <span style="font-weight:400;text-transform:none;letter-spacing:0;font-size:11px;color:var(--muted);">(optional)</span></label>
+        <div class="asset-upload-area" id="assetUploadArea" onclick="document.getElementById('assetFileInput').click()">
+          <img id="assetPreview" class="asset-preview" style="display:none;" alt="Asset preview" />
+          <div class="asset-upload-text" id="assetUploadText">
+            <strong>Tap to upload</strong>
+            Venue photo, performer, or logo
+          </div>
+        </div>
+        <input type="file" id="assetFileInput" accept="image/*" style="display:none;" onchange="handleAsset(this)" />
+        <div class="field-hint" style="margin-top:8px;">Optional. Woven into sticker prompts as location atmosphere or decorative element.</div>
+      </div>
+
+      <div class="field">
+        <label class="field-label">Asset type</label>
+        <div class="select-wrap">
+          <select id="fAssetType">
+            <option value="">— None / Not applicable —</option>
+            <option value="venue">Venue (temple, arena, landmark)</option>
+            <option value="logo">Logo / Brand</option>
+            <option value="person">Person (performer, celebrity)</option>
+          </select>
+        </div>
+      </div>
+
+      <div class="field">
+        <div class="toggle-row">
+          <div class="toggle-info">
+            <strong>Active</strong>
+            <span>Inactive kiosks won't load for customers</span>
+          </div>
+          <label class="toggle">
+            <input type="checkbox" id="fActive" checked />
+            <div class="toggle-track"></div>
+            <div class="toggle-thumb"></div>
+          </label>
+        </div>
+      </div>
+
+      <div class="btn-row">
+        <button class="btn btn-primary" id="saveBtn" onclick="saveLocation()">Create Location</button>
+        <button class="btn btn-secondary" id="cancelEditBtn" onclick="cancelEdit()" style="display:none;">Cancel</button>
+      </div>
+
+    </div>
+  </div>
+
+  <!-- Existing locations -->
+  <div class="section">
+    <div class="section-title">Kiosk Locations</div>
+    <div id="locationsList">
+      <div style="color:var(--muted);font-size:13px;padding:20px 0;">Loading locations...</div>
+    </div>
+  </div>
+
+</div>
+
+<!-- Toast -->
+<div class="toast" id="toast"></div>
+
+<script>
+// ─── Config ───────────────────────────────────────────────────────────────────
+const ADMIN_PASSWORD = 'stickerme2026'; // Change this before deploying
+const KIOSK_API      = 'https://kiosk-api-production-0cdc.up.railway.app';
+const SUPABASE_URL   = 'https://oaghbtvdlouwhwjvrdct.supabase.co';
+const SUPABASE_KEY   = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6Im9hZ2hidHZkbG91d2h3anZyZGN0Iiwicm9sZSI6ImFub24iLCJpYXQiOjE3ODE2NTM3MzUsImV4cCI6MjA5NzIyOTczNX0.nKBEsBb6rfa_1TPhl5mCXcxNcH_c_gM5aCsgeIyv_ZM';
+
+const ALL_STYLES = [
+  { id: 'western',  name: 'Western' },
+  { id: 'samurai',  name: 'Samurai' },
+  { id: 'spy',      name: 'Spy' },
+  { id: 'tarot',    name: 'Tarot' },
+  { id: 'bali_m', name: 'Bali Adventure' },
+  { id: 'bali_f', name: 'Bali Dream Trip' },
+  { id: 'grand_line', name: 'Grand Line Pirates' },
+  { id: 'royal',    name: 'Royal Portrait' },
+  { id: 'ghibli',   name: 'Ghibli' },
+  { id: 'jojo',     name: "JoJo's Bizarre Adventure" },
+  { id: 'fashion',  name: 'Fashion' },
+  { id: 'princess', name: 'Princess' }
+];
+
+// ─── State ────────────────────────────────────────────────────────────────────
+let editingId    = null; // location_id being edited, null = create mode
+let assetFile    = null;
+let existingAssetUrl = null;
+
+// ─── Auth ─────────────────────────────────────────────────────────────────────
+function login() {
+  const pw = document.getElementById('passwordInput').value;
+  if (pw === ADMIN_PASSWORD) {
+    sessionStorage.setItem('kiosk_config_auth', '1');
+    document.getElementById('loginScreen').style.display = 'none';
+    document.getElementById('mainUI').style.display = 'block';
+    buildStyleGrid();
+    loadLocations();
+  } else {
+    document.getElementById('loginError').style.display = 'block';
+    document.getElementById('passwordInput').value = '';
+  }
+}
+
+function logout() {
+  sessionStorage.removeItem('kiosk_config_auth');
+  location.reload();
+}
+
+// Check if already logged in this session
+if (sessionStorage.getItem('kiosk_config_auth') === '1') {
+  document.getElementById('loginScreen').style.display = 'none';
+  document.getElementById('mainUI').style.display = 'block';
+  buildStyleGrid();
+  loadLocations();
+}
+
+// ─── Style grid ───────────────────────────────────────────────────────────────
+function buildStyleGrid(selectedStyles) {
+  const grid = document.getElementById('styleGrid');
+  const defaults = selectedStyles || ALL_STYLES.map(s => s.id);
+  grid.innerHTML = ALL_STYLES.map(s => `
+    <label class="style-check ${defaults.includes(s.id) ? 'checked' : ''}" id="sc-${s.id}">
+      <input type="checkbox" value="${s.id}" ${defaults.includes(s.id) ? 'checked' : ''} onchange="updateStyleCheck(this)" />
+      <div class="style-check-box"></div>
+      <div class="style-check-label">${s.name}</div>
+    </label>
+  `).join('');
+}
+
+function updateStyleCheck(checkbox) {
+  const label = checkbox.closest('.style-check');
+  label.classList.toggle('checked', checkbox.checked);
+}
+
+function getSelectedStyles() {
+  return ALL_STYLES
+    .map(s => s.id)
+    .filter(id => document.querySelector(`#sc-${id} input`)?.checked);
+}
+
+// ─── Auto-generate location ID from name ──────────────────────────────────────
+function autoGenId() {
+  if (editingId) return; // don't overwrite when editing
+  const name = document.getElementById('fName').value;
+  const id   = name.toLowerCase().replace(/[^a-z0-9]+/g, '').slice(0, 30);
+  document.getElementById('fId').value = id;
+}
+
+// ─── Asset handling ───────────────────────────────────────────────────────────
+function handleAsset(input) {
+  const file = input.files[0];
+  if (!file) return;
+  assetFile = file;
+  const reader = new FileReader();
+  reader.onload = e => {
+    const preview = document.getElementById('assetPreview');
+    preview.src = e.target.result;
+    preview.style.display = 'block';
+    document.getElementById('assetUploadText').style.display = 'none';
+    document.getElementById('assetUploadArea').classList.add('has-asset');
+  };
+  reader.readAsDataURL(file);
+  input.value = '';
+}
+
+async function uploadAsset(locationId, file) {
+  const ext  = file.type === 'image/png' ? 'png' : 'jpg';
+  const path = `kiosk/${locationId}/asset.${ext}`;
+  const res  = await fetch(`${SUPABASE_URL}/storage/v1/object/sticker-images/${path}`, {
+    method: 'POST',
+    headers: {
+      'Authorization': 'Bearer ' + SUPABASE_KEY,
+      'apikey': SUPABASE_KEY,
+      'Content-Type': file.type,
+      'x-upsert': 'true'
+    },
+    body: file
+  });
+  if (!res.ok) throw new Error('Asset upload failed: ' + await res.text());
+  return `${SUPABASE_URL}/storage/v1/object/public/sticker-images/${path}`;
+}
+
+// ─── Save location ────────────────────────────────────────────────────────────
+async function saveLocation() {
+  const name    = document.getElementById('fName').value.trim();
+  const id      = document.getElementById('fId').value.trim().toLowerCase().replace(/\s+/g,'');
+  const city    = document.getElementById('fCity').value.trim();
+  const country = document.getElementById('fCountry').value;
+  const context = document.getElementById('fContext').value.trim();
+  const active  = document.getElementById('fActive').checked;
+  const assetType = document.getElementById('fAssetType').value || null;
+  const styles  = getSelectedStyles();
+
+  if (!name || !id || !city) { showToast('error', 'Name, ID, and city are required.'); return; }
+  if (styles.length === 0)   { showToast('error', 'Select at least one style.'); return; }
+
+  const btn = document.getElementById('saveBtn');
+  btn.disabled = true;
+  btn.innerHTML = '<span class="spinner"></span>';
+
+  try {
+    // Upload asset if new file selected
+    let assetUrl = existingAssetUrl || null;
+    if (assetFile) {
+      assetUrl = await uploadAsset(id, assetFile);
+    }
+
+    const payload = {
+      location_id:      id,
+      location_name:    name,
+      city,
+      country,
+      location_context: context || null,
+      active,
+      active_styles:    styles,
+      asset_url:        assetUrl,
+      asset_type:       assetType
+    };
+
+    if (editingId) {
+      // Update existing
+      const res = await fetch(
+        `${SUPABASE_URL}/rest/v1/kiosk_locations?location_id=eq.${encodeURIComponent(editingId)}`,
+        {
+          method: 'PATCH',
+          headers: {
+            'apikey': SUPABASE_KEY, 'Authorization': 'Bearer ' + SUPABASE_KEY,
+            'Content-Type': 'application/json', 'Prefer': 'return=minimal'
+          },
+          body: JSON.stringify(payload)
+        }
+      );
+      if (!res.ok) throw new Error(await res.text());
+      showToast('success', `${name} updated!`);
+    } else {
+      // Create new
+      payload.updated_at = new Date().toISOString();
+      const res = await fetch(`${SUPABASE_URL}/rest/v1/kiosk_locations`, {
+        method: 'POST',
+        headers: {
+          'apikey': SUPABASE_KEY, 'Authorization': 'Bearer ' + SUPABASE_KEY,
+          'Content-Type': 'application/json', 'Prefer': 'return=minimal'
+        },
+        body: JSON.stringify(payload)
+      });
+      if (!res.ok) throw new Error(await res.text());
+      showToast('success', `${name} created! URLs are ready below.`);
+    }
+
+    cancelEdit();
+    await loadLocations();
+
+  } catch(err) {
+    showToast('error', err.message || 'Save failed. Try again.');
+  } finally {
+    btn.disabled = false;
+    btn.textContent = editingId ? 'Save Changes' : 'Create Location';
+  }
+}
+
+// ─── Load locations ───────────────────────────────────────────────────────────
+async function loadLocations() {
+  const container = document.getElementById('locationsList');
+  try {
+    const res = await fetch(
+      `${SUPABASE_URL}/rest/v1/kiosk_locations?order=created_at.desc&select=*`,
+      { headers: { 'apikey': SUPABASE_KEY, 'Authorization': 'Bearer ' + SUPABASE_KEY } }
+    );
+    if (!res.ok) throw new Error();
+    const locations = await res.json();
+
+    if (!locations || locations.length === 0) {
+      container.innerHTML = '<div style="color:var(--muted);font-size:13px;padding:20px 0;">No kiosk locations yet. Create one above.</div>';
+      return;
+    }
+
+    container.innerHTML = locations.map(loc => renderLocationCard(loc)).join('');
+  } catch(e) {
+    container.innerHTML = '<div style="color:var(--error);font-size:13px;padding:20px 0;">Could not load locations. Check your connection.</div>';
+  }
+}
+
+function renderLocationCard(loc) {
+  const baseUrl     = 'https://stickerme.github.io/kiosk-app';
+  const isOnline    = loc.location_id === 'online';
+  const customerUrl = isOnline ? `${baseUrl}/kiosk-online.html` : `${baseUrl}/kiosk-customer.html?location=${loc.location_id}`;
+  const printUrl    = isOnline ? `${baseUrl}/online-fulfillment.html` : `${baseUrl}/kiosk-print.html?location=${loc.location_id}`;
+  const customerLabel = isOnline ? 'ONLINE STORE' : 'CUSTOMER';
+  const printLabel    = isOnline ? 'FULFILLMENT' : 'PRINT';
+  const styleNames  = (loc.active_styles || []).map(s => ALL_STYLES.find(a => a.id === s)?.name || s).join(', ');
+
+  return `
+    <div class="location-card ${loc.active ? '' : 'inactive'}">
+      <div class="loc-top">
+        <div>
+          <div class="loc-name">${escHtml(loc.location_name)}</div>
+          <div class="loc-id">${loc.location_id} · ${loc.city}, ${loc.country}</div>
+        </div>
+        <div class="loc-status ${loc.active ? 'active' : 'inactive'}">${loc.active ? '● Active' : '○ Inactive'}</div>
+      </div>
+
+      <div style="font-size:11px;color:var(--muted);margin-bottom:12px;">
+        Styles: ${escHtml(styleNames)}
+      </div>
+
+      <div class="loc-urls">
+        <div class="url-row">
+          <span class="url-label">${customerLabel}</span>
+          <span class="url-text">${customerUrl}</span>
+          <button class="copy-btn" onclick="copyUrl('${customerUrl}', this)">Copy</button>
+        </div>
+        <div class="url-row">
+          <span class="url-label">${printLabel}</span>
+          <span class="url-text">${printUrl}</span>
+          <button class="copy-btn" onclick="copyUrl('${printUrl}', this)">Copy</button>
+        </div>
+      </div>
+
+      <div class="loc-actions">
+        <button class="loc-btn" onclick="editLocation('${loc.location_id}')">✏️ Edit</button>
+        <button class="loc-btn ${loc.active ? 'warn' : ''}" onclick="toggleActive('${loc.location_id}', ${!loc.active})">
+          ${loc.active ? '⏸ Deactivate' : '▶ Activate'}
+        </button>
+      </div>
+    </div>
+  `;
+}
+
+// ─── Edit location ────────────────────────────────────────────────────────────
+async function editLocation(locationId) {
+  try {
+    const res = await fetch(
+      `${SUPABASE_URL}/rest/v1/kiosk_locations?location_id=eq.${encodeURIComponent(locationId)}&select=*`,
+      { headers: { 'apikey': SUPABASE_KEY, 'Authorization': 'Bearer ' + SUPABASE_KEY } }
+    );
+    const locs = await res.json();
+    if (!locs || locs.length === 0) return;
+    const loc = locs[0];
+
+    editingId = loc.location_id;
+    existingAssetUrl = loc.asset_url || null;
+
+    document.getElementById('fName').value    = loc.location_name;
+    document.getElementById('fId').value      = loc.location_id;
+    document.getElementById('fId').readOnly   = true; // can't change ID once created
+    document.getElementById('fCity').value    = loc.city;
+    document.getElementById('fCountry').value = loc.country;
+    document.getElementById('fContext').value = loc.location_context || '';
+    document.getElementById('fActive').checked = loc.active;
+    document.getElementById('fAssetType').value = loc.asset_type || '';
+
+    buildStyleGrid(loc.active_styles || ALL_STYLES.map(s => s.id));
+
+    if (loc.asset_url) {
+      document.getElementById('assetPreview').src = loc.asset_url;
+      document.getElementById('assetPreview').style.display = 'block';
+      document.getElementById('assetUploadText').style.display = 'none';
+      document.getElementById('assetUploadArea').classList.add('has-asset');
+    }
+
+    document.getElementById('formSectionTitle').textContent = `Edit — ${loc.location_name}`;
+    document.getElementById('saveBtn').textContent = 'Save Changes';
+    document.getElementById('cancelEditBtn').style.display = 'block';
+
+    // Scroll to form
+    document.getElementById('createSection').scrollIntoView({ behavior: 'smooth' });
+  } catch(e) {
+    showToast('error', 'Could not load location data.');
+  }
+}
+
+function cancelEdit() {
+  editingId        = null;
+  existingAssetUrl = null;
+  assetFile        = null;
+
+  document.getElementById('fName').value     = '';
+  document.getElementById('fId').value       = '';
+  document.getElementById('fId').readOnly    = false;
+  document.getElementById('fCity').value     = '';
+  document.getElementById('fCountry').value  = 'US';
+  document.getElementById('fContext').value  = '';
+  document.getElementById('fActive').checked = true;
+  document.getElementById('fAssetType').value = '';
+  document.getElementById('assetPreview').style.display   = 'none';
+  document.getElementById('assetPreview').src              = '';
+  document.getElementById('assetUploadText').style.display = 'block';
+  document.getElementById('assetUploadArea').classList.remove('has-asset');
+
+  buildStyleGrid();
+  document.getElementById('formSectionTitle').textContent = 'Create New Kiosk Location';
+  document.getElementById('saveBtn').textContent = 'Create Location';
+  document.getElementById('cancelEditBtn').style.display = 'none';
+}
+
+// ─── Toggle active ────────────────────────────────────────────────────────────
+async function toggleActive(locationId, newState) {
+  try {
+    const res = await fetch(
+      `${SUPABASE_URL}/rest/v1/kiosk_locations?location_id=eq.${encodeURIComponent(locationId)}`,
+      {
+        method: 'PATCH',
+        headers: {
+          'apikey': SUPABASE_KEY, 'Authorization': 'Bearer ' + SUPABASE_KEY,
+          'Content-Type': 'application/json', 'Prefer': 'return=minimal'
+        },
+        body: JSON.stringify({ active: newState, updated_at: new Date().toISOString() })
+      }
+    );
+    if (!res.ok) throw new Error();
+    showToast('success', newState ? 'Kiosk activated.' : 'Kiosk deactivated.');
+    await loadLocations();
+  } catch(e) {
+    showToast('error', 'Could not update status.');
+  }
+}
+
+// ─── Copy URL ─────────────────────────────────────────────────────────────────
+async function copyUrl(url, btn) {
+  try {
+    await navigator.clipboard.writeText(url);
+    const orig = btn.textContent;
+    btn.textContent = 'Copied!';
+    btn.style.color = 'var(--success)';
+    setTimeout(() => { btn.textContent = orig; btn.style.color = ''; }, 2000);
+  } catch(e) {
+    prompt('Copy this URL:', url);
+  }
+}
+
+// ─── Toast ────────────────────────────────────────────────────────────────────
+let toastTimer = null;
+function showToast(type, msg) {
+  const toast = document.getElementById('toast');
+  toast.className = `toast ${type} show`;
+  toast.textContent = msg;
+  if (toastTimer) clearTimeout(toastTimer);
+  toastTimer = setTimeout(() => toast.classList.remove('show'), 3500);
+}
+
+// ─── Utilities ────────────────────────────────────────────────────────────────
+function escHtml(str) {
+  return String(str).replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;').replace(/"/g,'&quot;');
+}
+</script>
+</body>
+</html>
