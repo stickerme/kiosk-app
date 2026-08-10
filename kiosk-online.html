@@ -446,9 +446,36 @@ function changeQty(d){qty=Math.max(1,Math.min(MAX_COPIES,qty+d));document.getEle
 function triggerCamera(){document.getElementById('cameraInput').click();}
 function triggerUpload(){document.getElementById('uploadInput').click();}
 
-function handlePhoto(input){var file=input.files[0];if(!file)return;selectedPhoto=file;var r=new FileReader();r.onload=function(e){document.getElementById('photoPreview').src=e.target.result;document.getElementById('photoPreview').style.display='block';document.getElementById('photoPlaceholder').style.display='none';document.getElementById('photoActions').style.display='flex';document.getElementById('photoArea').classList.add('has-photo');document.getElementById('photoArea').classList.remove('err');};r.readAsDataURL(file);input.value='';}
+function handlePhoto(input){
+  var file=input.files[0];if(!file)return;
+  // Convert any format (HEIC, PNG, WebP) to JPEG via canvas
+  // This ensures OpenAI always receives a compatible image format
+  var r=new FileReader();
+  r.onload=function(e){
+    var img=new Image();
+    img.onload=function(){
+      var canvas=document.createElement('canvas');
+      var MAX=1600;
+      var w=img.width,h=img.height;
+      if(w>MAX||h>MAX){if(w>h){h=Math.round(h*MAX/w);w=MAX;}else{w=Math.round(w*MAX/h);h=MAX;}}
+      canvas.width=w;canvas.height=h;
+      canvas.getContext('2d').drawImage(img,0,0,w,h);
+      canvas.toBlob(function(blob){
+        selectedPhoto=new File([blob],'photo.jpg',{type:'image/jpeg'});
+        document.getElementById('photoPreview').src=e.target.result;
+        document.getElementById('photoPreview').style.display='block';
+        document.getElementById('photoPlaceholder').style.display='none';
+        document.getElementById('photoActions').style.display='flex';
+        document.getElementById('photoArea').classList.add('has-photo');
+        document.getElementById('photoArea').classList.remove('err');
+      },'image/jpeg',0.92);
+    };
+    img.src=e.target.result;
+  };
+  r.readAsDataURL(file);input.value='';
+}
 
-async function uploadPhoto(file,id){var ext=file.type==='image/png'?'png':'jpg',path='online/guests/'+id+'.'+ext;var res=await fetch(SUPABASE_URL+'/storage/v1/object/sticker-images/'+path,{method:'POST',headers:{'Authorization':'Bearer '+SUPABASE_KEY,'apikey':SUPABASE_KEY,'Content-Type':file.type,'x-upsert':'true'},body:file});if(!res.ok)throw new Error('Photo upload failed');return SUPABASE_URL+'/storage/v1/object/public/sticker-images/'+path;}
+async function uploadPhoto(file,id){var path='online/guests/'+id+'.jpg';var res=await fetch(SUPABASE_URL+'/storage/v1/object/sticker-images/'+path,{method:'POST',headers:{'Authorization':'Bearer '+SUPABASE_KEY,'apikey':SUPABASE_KEY,'Content-Type':'image/jpeg','x-upsert':'true'},body:file});if(!res.ok)throw new Error('Photo upload failed');return SUPABASE_URL+'/storage/v1/object/public/sticker-images/'+path;}
 
 async function addToCart(){
   if(!selectedPhoto){document.getElementById('photoArea').classList.add('err');showToast('error','Please add a photo.');return;}
